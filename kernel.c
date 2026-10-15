@@ -5,8 +5,13 @@ typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
 typedef uint32_t size_t;
 
+/// These values are set by the linker.
+/// __bss and __bss_end are a pair, and store the range of addresses holding
+/// variables which have statically-assigned memory locations.
+/// __stack_top is the top of the stack.
 extern char __bss[], __bss_end[], __stack_top[];
 
+/// Make a call to SBI.
 struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
                        long arg5, long fid, long eid) {
   register long a0 __asm__("a0") = arg0;
@@ -27,9 +32,11 @@ struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
 }
 
 void putchar(char ch) {
-  sbi_call(ch, 0, 0, 0, 0, 0, 0, 1 /* Console Putchar */);
+  // Console putchar.
+  sbi_call(ch, 0, 0, 0, 0, 0, 0, 1);
 }
 
+/// DIY version of stdlib memset.
 void *memset(void *buf, char c, size_t n) {
   uint8_t *p = (uint8_t *)buf;
   while (n--)
@@ -38,6 +45,15 @@ void *memset(void *buf, char c, size_t n) {
 }
 
 void kernel_main(void) {
+  // Initialise all statically allocated variables to zero.
+  // Some bootloaders do this automatically (Q: Which ones?)
+  memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);
+
+  const char *s = "\n\nHello World!\n";
+  for (int i = 0; s[i] != '\0'; i++) {
+    putchar(s[i]);
+  }
+
   printf("\n\nHello %s\n", "World!");
   printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
 
@@ -48,7 +64,13 @@ void kernel_main(void) {
   }
 }
 
-__attribute__((section(".text.boot"))) __attribute__((naked)) void boot(void) {
+/// Program entrypoint.
+/// boot is placed at the start of the program in the .text.boot section to
+/// because that's where OpenSBI jumps by default.
+__attribute__((section(".text.boot")))
+// Don't decorate boot with implicit instructions such as a return.
+// The function contains the inline assembly and nothing but.
+__attribute__((naked)) void boot(void) {
   __asm__ __volatile__(
       // Set the stack pointer
       "mv sp, %[stack_top]\n"

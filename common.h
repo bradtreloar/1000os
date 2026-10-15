@@ -5,4 +5,5 @@
 #define va_end   __builtin_va_end
 #define va_arg   __builtin_va_arg
 
+/// DIY version of stdlib printf
 void printf(const char *fmt, ...);
