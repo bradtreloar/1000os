@@ -36,25 +36,15 @@ void putchar(char ch) {
   sbi_call(ch, 0, 0, 0, 0, 0, 0, 1);
 }
 
-/// DIY version of stdlib memset.
-void *memset(void *buf, char c, size_t n) {
-  uint8_t *p = (uint8_t *)buf;
-  while (n--)
-    *p++ = c;
-  return buf;
-}
-
 void kernel_main(void) {
   // Initialise all statically allocated variables to zero.
   // Some bootloaders do this automatically (Q: Which ones?)
   memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);
 
-  const char *s = "\n\nHello World!\n";
-  for (int i = 0; s[i] != '\0'; i++) {
-    putchar(s[i]);
-  }
-
   printf("\n\nHello %s\n", "World!");
+
+  PANIC("Aaaaaah!");
+
   printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
 
   // Waiting for interrupt causes the kernel to pause execution, which is a bit
